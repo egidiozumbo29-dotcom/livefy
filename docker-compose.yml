@@ -1,0 +1,42 @@
+# PostgreSQL per sviluppo locale:
+#  - postgres (5434): API Nest Livefy (`apps/api`)
+#  - owner_hub_postgres (5435): Owner Hub multi-piattaforma (`apps/owner-hub`)
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: livefy
+    # Porta host 5434: evita conflitti se altro servizio usa già 5433 su Windows.
+    ports:
+      - "5434:5432"
+    volumes:
+      - livefy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d livefy"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+  owner_hub_postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: owner_hub
+    ports:
+      - "5435:5432"
+    volumes:
+      - owner_hub_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d owner_hub"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  livefy_pgdata:
+  owner_hub_pgdata:

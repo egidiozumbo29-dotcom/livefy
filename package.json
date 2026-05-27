@@ -1,0 +1,33 @@
+{
+  "name": "synthra-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "apps/api",
+    "apps/owner-hub"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c magenta,cyan \"npm run dev:api\" \"npm run dev -w synthra-web -- -p 3000\"",
+    "dev:web": "npm run dev -w synthra-web -- -p 3000",
+    "dev:web:fresh": "npm run dev:fresh -w synthra-web",
+    "dev:web:turbo": "npm run dev:turbo -w synthra-web -- -p 3000",
+    "dev:web:clean": "npm run clean -w synthra-web && npm run dev:web",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "dev:api": "npm run start:dev -w synthra-api",
+    "dev:hub": "npm run dev -w owner-hub",
+    "build:hub": "npm run build -w owner-hub",
+    "build:web": "npm run build -w synthra-web",
+    "build:api": "npm run build -w synthra-api",
+    "prisma:generate": "npm run prisma:generate -w synthra-api",
+    "db:deploy:api": "npm run db:deploy -w synthra-api",
+    "db:seed:api": "npm run db:seed -w synthra-api",
+    "db:setup:api": "npm run db:setup -w synthra-api",
+    "docker:build:api": "docker build -f deploy/Dockerfile.api -t synthra-api:latest .",
+    "docker:build:web": "docker build -f deploy/Dockerfile.web -t synthra-web:latest --build-arg NEXT_PUBLIC_API_URL=http://localhost:4000/api --build-arg NEXT_PUBLIC_WS_URL=http://localhost:4000 .",
+    "docker:compose:prod": "docker compose -f docker-compose.prod.yml"
+  }
+}

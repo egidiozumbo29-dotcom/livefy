@@ -1,0 +1,59 @@
+# Caddyfile per Livefy / Synthra in produzione
+#
+# Caddy gestisce TLS automatico via Let's Encrypt. Zero config certificati.
+#
+# Setup:
+#   1) Punta i DNS:
+#        A   www.tuodominio.com   -> IP_VPS
+#        A   api.tuodominio.com   -> IP_VPS
+#   2) Copia questo file in /etc/caddy/Caddyfile (o monta come volume nel container).
+#   3) Sostituisci tuodominio.com con il tuo dominio reale.
+#   4) Apri porte 80 e 443 sul firewall del VPS.
+#   5) `systemctl reload caddy` (o restart del container Caddy).
+#
+# I container API (porta 4000) e Web (porta 3000) NON espongono direttamente
+# le porte: solo Caddy le pubblica con HTTPS.
+
+# Frontend Next.js
+www.tuodominio.com, tuodominio.com {
+	encode zstd gzip
+	# Redirect apex -> www (opzionale, commenta se non vuoi il redirect)
+	@apex host tuodominio.com
+	redir @apex https://www.tuodominio.com{uri} 301
+
+	reverse_proxy web:3000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+}
+
+# API NestJS (REST + Socket.IO)
+api.tuodominio.com {
+	encode zstd gzip
+
+	# Stripe webhook richiede raw body — Caddy lo preserva di default.
+	# Socket.IO usa upgrade WebSocket: Caddy lo gestisce automaticamente.
+	reverse_proxy api:4000 {
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+
+		# Timeout lunghi per long-polling Socket.IO e upload media
+		transport http {
+			read_timeout 5m
+			write_timeout 5m
+		}
+	}
+
+	# CORS già gestito da Nest (CORS_ORIGIN env). Non duplicare qui.
+}
+
+# Note operative:
+# - Stripe webhook URL da configurare nella dashboard Stripe:
+#     https://api.tuodominio.com/api/payments/webhook
+# - Verifica firma webhook richiede STRIPE_WEBHOOK_SECRET nel .env API.
+# - Per testare TLS prima del DNS: sostituisci i domini con il tuo IP e usa
+#   `tls internal` (cert self-signed) o disabilita TLS con `:80`.

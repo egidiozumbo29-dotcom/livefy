@@ -1,0 +1,78 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+  output        = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("OWNER_HUB_DATABASE_URL")
+}
+
+model Platform {
+  id        String           @id
+  name      String
+  apiUrl    String?
+  createdAt DateTime         @default(now())
+  events    AnalyticsEvent[]
+  rollups   DailyRollup[]
+}
+
+model AnalyticsEvent {
+  id           String   @id @default(cuid())
+  platformId   String
+  externalId   String
+  type         String
+  userId       String?
+  username     String?
+  amountTokens Decimal? @db.Decimal(18, 2)
+  amountEur    Decimal? @db.Decimal(18, 4)
+  currency     String?
+  meta         Json?
+  occurredAt   DateTime
+  receivedAt   DateTime @default(now())
+
+  platform Platform @relation(fields: [platformId], references: [id])
+
+  @@unique([platformId, externalId])
+  @@index([platformId, type, occurredAt])
+  @@index([occurredAt])
+}
+
+model DailyRollup {
+  id          String   @id @default(cuid())
+  platformId  String
+  day         DateTime @db.Date
+  grossTokens Decimal  @default(0) @db.Decimal(18, 2)
+  grossEur    Decimal  @default(0) @db.Decimal(18, 4)
+  payoutEur   Decimal  @default(0) @db.Decimal(18, 4)
+  netOwnerEur Decimal  @default(0) @db.Decimal(18, 4)
+  newUsers    Int      @default(0)
+  activeUsers Int      @default(0)
+  events      Int      @default(0)
+
+  platform Platform @relation(fields: [platformId], references: [id])
+
+  @@unique([platformId, day])
+}
+
+model MagicLinkToken {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model OwnerSession {
+  id        String   @id @default(cuid())
+  email     String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}

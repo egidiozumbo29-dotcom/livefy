@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* Evita next/font + Google in dev (reti bloccate = server che non arriva a “Ready”). */
+  --font-geist: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-geist-mono: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  --tap-highlight: rgba(255, 140, 0, 0.18);
+}
+
+html {
+  min-height: 100%;
+  background: #0d0d0f;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-cam-bg text-cam-text antialiased;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: var(--tap-highlight);
+  overscroll-behavior-y: none;
+  touch-action: manipulation;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+@media (min-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 14px;
+  }
+}
+
+.live-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbars on horizontal pill rows */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer components {
+  .tablet-container {
+    @apply mx-auto w-full max-w-[1180px] px-3 sm:px-4 md:px-6 lg:px-8;
+  }
+
+  .mobile-card {
+    @apply rounded-2xl border border-cam-border bg-cam-card p-4 shadow-[0_8px_28px_rgba(0,0,0,0.35)] sm:rounded-xl sm:p-5;
+  }
+
+  .touch-target {
+    @apply min-h-11 min-w-11;
+  }
+
+  /* Tip / CTA: gradiente sul tema viola STREAMFY legacy */
+  .btn-tip {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-cam-ink shadow-md transition hover:opacity-95 active:scale-[0.98] disabled:opacity-50;
+    background-image: linear-gradient(180deg, #ffa733 0%, #ff8c00 55%, #e67a00 100%);
+  }
+
+  .btn-tip-lg {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-8 py-3 text-base font-bold uppercase tracking-wider text-cam-ink shadow-md transition hover:opacity-95 active:scale-[0.98] disabled:opacity-50;
+    background-image: linear-gradient(180deg, #ffa733 0%, #ff8c00 55%, #e67a00 100%);
+  }
+
+  /* Chip / tag sulla griglia homepage (su sfondo scuro) */
+  .chip {
+    @apply inline-flex shrink-0 items-center gap-1 rounded-full border border-cam-border bg-cam-card px-3 py-1 text-[12px] font-medium text-cam-muted transition hover:border-cam-orange/50 hover:bg-cam-orange/10 hover:text-cam-text;
+  }
+
+  .chip-active {
+    @apply border-cam-orange bg-cam-orange/20 text-cam-orange-bright shadow-[0_0_0_1px_rgba(255,140,0,0.35)];
+  }
+
+  .tag-pill {
+    @apply inline-flex items-center rounded-full border border-cam-border bg-cam-card px-2 py-0.5 text-[11px] font-medium text-cam-orange;
+  }
+
+
+  /** Pulsanti primari a gradiente sul nuovo tema. */
+  .bg-pink-cta {
+    background-image: linear-gradient(135deg, #b47fff 0%, #8c4fe6 100%);
+  }
+
+  /** Form / card su sfondo scuro (login, impostazioni, ecc.) */
+  .form-panel {
+    @apply rounded-md border border-cam-border bg-cam-card p-6 text-cam-text shadow-[0_4px_24px_rgba(0,0,0,0.45)];
+  }
+
+  .form-label {
+    @apply block text-xs font-semibold uppercase tracking-wider text-cam-muted;
+  }
+
+  .form-input {
+    @apply mt-1 w-full rounded-md border border-cam-border bg-cam-ink px-3 py-2 text-sm text-cam-text placeholder:text-cam-muted focus:border-cam-orange focus:outline-none focus:ring-2 focus:ring-cam-orange/35;
+  }
+
+  /** Schede contenuto studio / impostazioni (su sfondo scuro shell). */
+  .panel-card {
+    @apply rounded-md border border-cam-border bg-cam-card p-5 text-cam-text shadow-[0_4px_20px_rgba(0,0,0,0.35)];
+  }
+
+  .panel-row {
+    @apply rounded-md border border-cam-border bg-cam-ink px-3 py-2;
+  }
+
+  .panel-muted {
+    @apply rounded-md border border-cam-border bg-cam-ink px-3 py-2 text-xs text-cam-muted;
+  }
+}

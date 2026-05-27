@@ -1,0 +1,48 @@
+=== Database per Livefy (API Nest) ===
+
+L'API NON parte senza un PostgreSQL raggiungibile con DATABASE_URL in apps/api/.env.
+
+--- Opzione 1: Docker (consigliata sul repo) ---
+1) Avvia Docker Desktop e attendi che sia pronto.
+2) Nella root del progetto:
+   npm run docker:up
+3) Poi:
+   .\scripts\setup-docker-db.ps1
+   (oppure manualmente: cd apps/api → npx prisma db push → npm run db:seed)
+4) Avvia API:
+   npm run dev:api
+
+DATABASE_URL atteso con compose di questo repo (porta host 5434):
+postgresql://postgres:postgres@127.0.0.1:5434/livefy?schema=public
+
+--- Opzione 2: PostgreSQL già installato su Windows ---
+Crea il database "livefy" e imposta in apps/api/.env una DATABASE_URL con
+UTENTE e PASSWORD che usi davvero (spesso porta 5432):
+postgresql://UTENTE:PASSWORD@localhost:5432/livefy?schema=public
+
+Poi:
+cd apps/api
+npx prisma db push
+npm run db:seed
+cd ..\..
+npm run dev:api
+
+--- Opzione 3: Neon (cloud, gratis, senza Docker) ---
+1) Crea un progetto su https://neon.tech e copia la connection string PostgreSQL.
+2) Incollala come DATABASE_URL e DIRECT_URL in apps/api/.env (stesso valore va bene).
+3) cd apps/api → npx prisma db push → npm run db:seed → npm run dev:api dalla root.
+
+--- Opzione 4: Supabase (consigliato) ---
+1) Vedi docs/SUPABASE.md nel repo.
+2) apps/api/.env con DATABASE_URL e DIRECT_URL (connection string URI porta 5432).
+3) cd apps/api → npx prisma migrate deploy → npm run db:seed
+   Oppure dalla root: npm run db:setup:api
+4) npm run dev:api
+
+SQL manuale (solo se non usi migrate deploy):
+- prisma/migrations/20260207120000_init/migration.sql
+- poi apps/api/sql/supabase_seed_demo.sql
+
+--- Verifica ---
+Browser: http://localhost:4000/api/health
+Deve rispondere JSON con ok: true.

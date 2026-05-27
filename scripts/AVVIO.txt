@@ -1,0 +1,25 @@
+=== Prossimi passi Livefy (ordine) ===
+
+1) Docker Postgres (repo) OPPURE Supabase
+   - Docker: avvia Docker Desktop, poi dalla root `npm run docker:up`
+   - apps/api/.env: porta host Postgres del compose è 5434 (vedi .env.example)
+   - Supabase: incolla DATABASE_URL / DIRECT_URL dalla dashboard (porta 5432).
+
+2) Database
+   Dalla ROOT del repo:
+     npm run db:setup:api
+   (migrate deploy + seed streamer demo)
+
+3) Avvio tutto in un terminale
+   Dalla ROOT:
+     npm run dev
+   Apre API :4000 e Next :3000 insieme.
+
+4) Verifica
+   - http://localhost:4000/api/health
+   - http://localhost:3000
+
+5) Login demo
+   streamer@demo.livefy / StreamerDemo123!
+
+Dettagli Supabase: docs/SUPABASE.md

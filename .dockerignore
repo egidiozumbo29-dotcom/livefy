@@ -1,0 +1,16 @@
+.git
+.github
+**/.next
+**/dist
+**/node_modules
+*.md
+!README.md
+frontend
+**/.env
+**/.env.*
+!**/.env.example
+apps/web/.next
+apps/api/dist
+.cursor
+mcps
+**/*.log

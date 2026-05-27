@@ -1,0 +1,548 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Per Supabase col pooler (porta 6543): metti la connessione "Direct" qui (vedi dashboard Supabase).
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  VIEWER
+  MODEL
+  ADMIN
+  MODERATOR
+}
+
+enum StreamStatus {
+  IDLE
+  LIVE
+  ENDED
+}
+
+enum ShowMode {
+  PUBLIC
+  BASE
+  PRIVATE
+  /**
+   * Ticket SPY: viewer "spia" un Premium 1v1 a tariffa ridotta. Usato in StreamAccess.mode.
+   */
+  SPY
+}
+
+enum PayoutStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
+
+enum TxStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum TxMethod {
+  STRIPE
+  PAYPAL
+  CRYPTO
+  APPLE_PAY
+  GOOGLE_PAY
+  INTERNAL
+}
+
+enum GalleryKind {
+  PHOTO
+  VIDEO
+}
+
+enum ModerationActionType {
+  MUTE
+  BAN
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  RESOLVED
+  REJECTED
+}
+
+model User {
+  id               String    @id @default(cuid())
+  username         String    @unique
+  email            String    @unique
+  passwordHash     String
+  role             Role      @default(VIEWER)
+  /**
+   * Wallet del viewer: token comprati.
+   */
+  balance          Decimal   @default(0) @db.Decimal(18, 4)
+  /**
+   * Wallet della creator: guadagni netti accreditati (al netto della fee piattaforma).
+   */
+  creatorBalance   Decimal   @default(0) @db.Decimal(18, 4)
+  birthDate        DateTime?
+  ageVerified      Boolean   @default(false)
+  country          String?
+  avatarUrl        String?
+  bannerUrl        String?
+  bio              String?
+  language         String?   @default("it")
+  /**
+   * Lingue aggiuntive (oltre `language`): es. ["en","es"].
+   */
+  languages        String[]  @default([])
+  /**
+   * Oggetto JSON sicuro chiave→URL ({ "instagram": "https://...", ... }).
+   */
+  socialLinks      Json?
+  /**
+   * Aggiornato da login/ping presenza — usato per badge online/offline.
+   */
+  lastSeenAt       DateTime?
+  category         String?
+  gender           String?
+  isCouple         Boolean   @default(false)
+  tags             String[]  @default([])
+  privateShowPrice Decimal?  @db.Decimal(18, 4)
+  googleId         String?   @unique
+  telegramId       String?   @unique
+  twoFactorSecret  String?
+  banned           Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  streams                  Stream[]
+  tipsSent                 Tip[]                 @relation("TipsSent")
+  tipsRecv                 Tip[]                 @relation("TipsRecv")
+  transactions             Transaction[]
+  messagesSent             Message[]             @relation("MsgSent")
+  messagesRecv             Message[]             @relation("MsgRecv")
+  privateChatControlsOwned PrivateChatControl[]   @relation("PrivateChatControlCreator")
+  privateChatControlsAsViewer PrivateChatControl[] @relation("PrivateChatControlViewer")
+  followingRelations       Follow[]              @relation("FollowerUser")
+  followerRelations        Follow[]              @relation("FollowingUser")
+  tipMenuItems             TipMenuItem[]
+  payoutRequests           PayoutRequest[]
+  galleryItems             GalleryItem[]
+  galleryPurchases         GalleryPurchase[]
+  /**
+   * Verifica documento + selfie per diventare streamer (MODEL).
+   */
+  streamerVerification     StreamerVerification?
+  notifications            Notification[]
+  profileVisitsAsViewer    ProfileVisit[]        @relation("ProfileVisitViewer")
+  profileVisitsAsSubject   ProfileVisit[]        @relation("ProfileVisitSubject")
+  ownedModerators          CreatorModerator[]    @relation("CreatorModeratorOwner")
+  moderatorChannels        CreatorModerator[]    @relation("CreatorModeratorUser")
+  moderationActions        ModerationAction[]    @relation("ModerationActionTarget")
+  moderationActorLogs      ModerationAction[]    @relation("ModerationActionActor")
+  wordFilters              WordFilter[]
+  reportsMade              UserReport[]          @relation("ReportReporter")
+  reportsReceived          UserReport[]          @relation("ReportTarget")
+  privateRequestsAsViewer  PrivateRequest[]      @relation("PrivateRequestViewer")
+  privateRequestsAsCreator PrivateRequest[]      @relation("PrivateRequestCreator")
+}
+
+enum NotificationType {
+  CREATOR_LIVE
+  CREATOR_ONLINE
+  DIRECT_MESSAGE
+}
+
+/**
+ * In-app: follower riceve aggiornamenti su creator seguite (live / tornata online).
+ */
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  /**
+   * Creator che ha innescato l’evento.
+   */
+  actorId   String?
+  title     String
+  body      String?
+  payload   Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  recipient User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@index([actorId, type])
+  @@map("notifications")
+}
+
+/**
+ * Ultima visita del viewer al profilo di una creator (cronologia Discover).
+ */
+model ProfileVisit {
+  id           String   @id @default(cuid())
+  viewerId     String
+  creatorId    String
+  lastViewedAt DateTime @default(now())
+
+  viewer  User @relation("ProfileVisitViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  creator User @relation("ProfileVisitSubject", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([viewerId, creatorId])
+  @@index([viewerId, lastViewedAt])
+  @@map("profile_visits")
+}
+
+/**
+ * Documento + selfie per verifica età/identità e attivazione ruolo MODEL (viewer → streamer).
+ */
+model StreamerVerification {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /**
+   * Path assoluto o relativo a uploads/ lato server — mai esposto al client.
+   */
+  idDocumentPath   String
+  selfieWithIdPath String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("streamer_verifications")
+}
+
+/**
+ * Foto/video in vetrina (URL esterni o CDN incollati dalla creator).
+ */
+model GalleryItem {
+  id           String      @id @default(cuid())
+  creatorId    String
+  kind         GalleryKind
+  title        String      @default("")
+  mediaUrl     String
+  thumbnailUrl String?
+  tokenPrice   Int         @default(0)
+  published    Boolean     @default(true)
+  sortOrder    Int         @default(0)
+  createdAt    DateTime    @default(now())
+
+  creator   User              @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  purchases GalleryPurchase[]
+
+  @@index([creatorId, published])
+}
+
+model GalleryPurchase {
+  id        String   @id @default(cuid())
+  itemId    String
+  buyerId   String
+  pricePaid Int      @default(0)
+  createdAt DateTime @default(now())
+
+  item  GalleryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  buyer User        @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, buyerId])
+  @@index([buyerId])
+}
+
+model Stream {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String       @default("")
+  status       StreamStatus @default(IDLE)
+  viewers      Int          @default(0)
+  startedAt    DateTime?
+  endedAt      DateTime?
+  roomId       String?      @unique
+  isPrivate    Boolean      @default(false)
+  passwordHash String?
+  thumbnail    String?
+
+  /**
+   * Modalita visibilita: PUBLIC (free), BASE (paghi sblocco), PRIVATE (1v1 token/min).
+   */
+  showMode               ShowMode @default(PUBLIC)
+  /**
+   * Token richiesti per accedere allo show BASE.
+   */
+  basePrice              Int      @default(0)
+  /**
+   * Token al minuto per il privato 1v1.
+   */
+  privatePricePerMinute  Int      @default(0)
+  /**
+   * Token al minuto per i viewer "spia" durante un Premium 1v1.
+   */
+  spyPricePerMinute      Int      @default(0)
+  /**
+   * ID viewer attualmente in sessione PRIVATE (lock 1v1).
+   */
+  currentPrivateViewerId String?
+  currentPrivateExclusive Boolean @default(false)
+  /**
+   * La streamer puo aprire/chiudere la chat senza terminare la live.
+   */
+  chatOpen               Boolean  @default(true)
+  /**
+   * Ingress LiveKit RTMP (OBS): ID per cleanup a fine live.
+   */
+  livekitIngressId       String?
+
+  tips            Tip[]
+  accesses        StreamAccess[]
+  reports         UserReport[]
+  privateRequests PrivateRequest[]
+
+  @@index([status])
+}
+
+/**
+ * Pagamento "ticket" del viewer per accedere a uno show BASE/PRIVATE.
+ */
+model StreamAccess {
+  id        String    @id @default(cuid())
+  streamId  String
+  viewerId  String
+  mode      ShowMode
+  pricePaid Int       @default(0)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  stream Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+
+  @@index([streamId, viewerId])
+  @@index([viewerId])
+}
+
+model Tip {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  streamId   String?
+  amount     Decimal  @db.Decimal(18, 4)
+  createdAt  DateTime @default(now())
+
+  sender   User    @relation("TipsSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User    @relation("TipsRecv", fields: [receiverId], references: [id], onDelete: Cascade)
+  stream   Stream? @relation(fields: [streamId], references: [id], onDelete: SetNull)
+}
+
+model Message {
+  id         String    @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String    @default("")
+  mediaUrl   String?
+  mediaType  String?
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  sender   User @relation("MsgSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("MsgRecv", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId, createdAt])
+  @@index([receiverId, createdAt])
+}
+
+model PrivateChatControl {
+  id        String   @id @default(cuid())
+  creatorId String
+  viewerId  String
+  locked    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creator User @relation("PrivateChatControlCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  viewer  User @relation("PrivateChatControlViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, viewerId])
+  @@index([viewerId])
+}
+
+model Transaction {
+  id         String   @id @default(cuid())
+  userId     String
+  amount     Decimal  @db.Decimal(18, 4)
+  method     TxMethod
+  status     TxStatus @default(PENDING)
+  metadata   Json?
+  externalId String?  @unique
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  User @relation("FollowerUser", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("FollowingUser", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
+model TipMenuItem {
+  id        String @id @default(cuid())
+  modelId   String
+  label     String
+  tokenCost Int
+  sortOrder Int    @default(0)
+
+  model User @relation(fields: [modelId], references: [id], onDelete: Cascade)
+}
+
+model CreatorModerator {
+  id          String   @id @default(cuid())
+  creatorId   String
+  moderatorId String
+  createdAt   DateTime @default(now())
+
+  creator   User @relation("CreatorModeratorOwner", fields: [creatorId], references: [id], onDelete: Cascade)
+  moderator User @relation("CreatorModeratorUser", fields: [moderatorId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, moderatorId])
+  @@index([moderatorId])
+}
+
+model ModerationAction {
+  id        String               @id @default(cuid())
+  creatorId String
+  targetId  String
+  actorId   String
+  type      ModerationActionType
+  reason    String?
+  expiresAt DateTime?
+  createdAt DateTime             @default(now())
+  revokedAt DateTime?
+
+  target User @relation("ModerationActionTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  actor  User @relation("ModerationActionActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId, targetId, type, revokedAt, expiresAt])
+  @@index([actorId, createdAt])
+}
+
+model WordFilter {
+  id        String   @id @default(cuid())
+  creatorId String
+  phrase    String
+  createdAt DateTime @default(now())
+
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([creatorId, phrase])
+  @@index([creatorId])
+}
+
+model UserReport {
+  id           String       @id @default(cuid())
+  reporterId   String
+  targetUserId String?
+  streamId     String?
+  reason       String
+  details      String?
+  status       ReportStatus @default(OPEN)
+  createdAt    DateTime     @default(now())
+  resolvedAt   DateTime?
+
+  reporter User    @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  target   User?   @relation("ReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  stream   Stream? @relation(fields: [streamId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([targetUserId, createdAt])
+  @@index([streamId, createdAt])
+}
+
+/**
+ * Richiesta di prelievo dei guadagni della creator.
+ */
+model PayoutRequest {
+  id          String       @id @default(cuid())
+  userId      String
+  /**
+   * Token richiesti (scalati dal creatorBalance al momento della richiesta).
+   */
+  amount      Decimal      @db.Decimal(18, 4)
+  /**
+   * Metodo di pagamento concordato: stripe, paypal, bank, crypto, ecc.
+   */
+  method      String       @default("manual")
+  /**
+   * Dati addizionali del pagamento (iban, paypal, indirizzo crypto).
+   */
+  destination String?
+  status      PayoutStatus @default(PENDING)
+  note        String?
+  createdAt   DateTime     @default(now())
+  paidAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+enum PrivateRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  EXPIRED
+}
+
+enum PrivateRequestKind {
+  NORMAL
+  EXCLUSIVE
+}
+
+model PrivateRequest {
+  id              String               @id @default(cuid())
+  streamId        String
+  viewerId        String
+  creatorId       String
+  tokensPerMinute Int                  @default(0)
+  kind            PrivateRequestKind   @default(NORMAL)
+  status          PrivateRequestStatus @default(PENDING)
+  createdAt       DateTime             @default(now())
+  expiresAt       DateTime
+  respondedAt     DateTime?
+  rejectionReason String?
+
+  stream  Stream @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  viewer  User   @relation("PrivateRequestViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  creator User   @relation("PrivateRequestCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@index([creatorId, status, createdAt])
+  @@index([viewerId, status, createdAt])
+  @@index([streamId, status])
+}
+
+/**
+ * Outbox per la consegna affidabile di eventi all'Owner Hub multi-piattaforma.
+ * Ogni evento di business (tip, payout, signup, ecc.) viene scritto qui nella
+ * stessa transazione del cambio di stato. Un job in background lo POSTa al hub
+ * con retry esponenziale e marca `sentAt` solo dopo la conferma.
+ */
+model OutboxEvent {
+  id         String    @id @default(cuid())
+  type       String
+  externalId String    @unique
+  payload    Json
+  occurredAt DateTime  @default(now())
+  sentAt     DateTime?
+  attempts   Int       @default(0)
+  lastError  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([sentAt, attempts])
+  @@index([occurredAt])
+}
