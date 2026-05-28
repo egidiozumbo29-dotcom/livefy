@@ -8,6 +8,7 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { PayoutStatus, Prisma } from "@prisma/client";
 import { OutboxService } from "../outbox/outbox.service";
+import { MailerService } from "../mailer/mailer.service";
 import { PrismaService } from "../prisma/prisma.service";
 import type { CreatePayoutDto } from "./dto/create-payout.dto";
 
@@ -25,6 +26,7 @@ export class PayoutsService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly outbox: OutboxService,
+    private readonly mailer: MailerService,
   ) {}
 
   /** Token minimi richiedibili per un singolo payout. */
@@ -211,6 +213,11 @@ export class PayoutsService {
     if (!ADMIN_PAYOUT_TRANSITIONS.has(key)) {
       throw new BadRequestException("transizione_stato_non_valida");
     }
+    const creator = await this.prisma.user.findUnique({
+      where: { id: row.userId },
+      select: { email: true, username: true },
+    });
+
     if (next === PayoutStatus.REJECTED) {
       await this.prisma.$transaction(async (tx) => {
         const amountDec = row.amount;
@@ -223,11 +230,28 @@ export class PayoutsService {
           data: { status: PayoutStatus.REJECTED },
         });
       });
+      if (creator) {
+        void this.mailer.sendPayoutStatusEmail({
+          to: creator.email,
+          username: creator.username,
+          status: "REJECTED",
+          amountTokens: Number(row.amount.toString()),
+          note: row.note,
+        });
+      }
     } else if (next === PayoutStatus.APPROVED) {
       await this.prisma.payoutRequest.update({
         where: { id },
         data: { status: PayoutStatus.APPROVED },
       });
+      if (creator) {
+        void this.mailer.sendPayoutStatusEmail({
+          to: creator.email,
+          username: creator.username,
+          status: "APPROVED",
+          amountTokens: Number(row.amount.toString()),
+        });
+      }
     } else if (next === PayoutStatus.PAID) {
       const paidAt = new Date();
       await this.prisma.payoutRequest.update({
@@ -271,6 +295,15 @@ export class PayoutsService {
           withholdPercent: withholdPct,
         },
       });
+      if (creator) {
+        void this.mailer.sendPayoutStatusEmail({
+          to: creator.email,
+          username: creator.username,
+          status: "PAID",
+          amountTokens: tokens,
+          amountEurNet: Math.round(paidEur * 100) / 100,
+        });
+      }
     }
     const updated = await this.prisma.payoutRequest.findUnique({
       where: { id },

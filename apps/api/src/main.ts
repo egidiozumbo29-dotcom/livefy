@@ -1,12 +1,21 @@
 import { NestFactory } from "@nestjs/core";
-import { ValidationPipe } from "@nestjs/common";
+import { ValidationPipe, Logger } from "@nestjs/common";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
+import { JsonLogger } from "./logger/json.logger";
+
+const isProd = process.env.NODE_ENV === "production";
+const logger = new Logger("Bootstrap");
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
+    bufferLogs: true,
+    logger: isProd ? new JsonLogger() : undefined,
   });
+
+  app.enableShutdownHooks();
+
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 
   const origins = process.env.CORS_ORIGIN?.split(",").map((s) => s.trim()).filter(Boolean);
@@ -28,6 +37,7 @@ async function bootstrap() {
 
   const port = process.env.PORT ?? "4000";
   await app.listen(port);
+  logger.log(`Synthra API in ascolto sulla porta ${port}`);
 
   const missing: string[] = [];
   if (!process.env.LIVEKIT_URL || !process.env.LIVEKIT_API_KEY || !process.env.LIVEKIT_API_SECRET) {
@@ -40,12 +50,18 @@ async function bootstrap() {
     missing.push("Redis (REDIS_URL) -> cache disabilitata (OK in dev)");
   }
   if (missing.length) {
-    const header = "[livefy] Credenziali esterne mancanti:";
-    // eslint-disable-next-line no-console
-    console.warn("\n" + header);
-    // eslint-disable-next-line no-console
-    for (const m of missing) console.warn("  - " + m);
+    logger.warn("Credenziali esterne mancanti:");
+    for (const m of missing) logger.warn(`  - ${m}`);
   }
+
+  const shutdown = async (signal: string) => {
+    logger.log(`Ricevuto ${signal} — graceful shutdown...`);
+    await app.close();
+    process.exit(0);
+  };
+
+  process.on("SIGTERM", () => { void shutdown("SIGTERM"); });
+  process.on("SIGINT", () => { void shutdown("SIGINT"); });
 }
 
 bootstrap();

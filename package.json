@@ -28,6 +28,8 @@
     "db:setup:api": "npm run db:setup -w synthra-api",
     "docker:build:api": "docker build -f deploy/Dockerfile.api -t synthra-api:latest .",
     "docker:build:web": "docker build -f deploy/Dockerfile.web -t synthra-web:latest --build-arg NEXT_PUBLIC_API_URL=http://localhost:4000/api --build-arg NEXT_PUBLIC_WS_URL=http://localhost:4000 .",
-    "docker:compose:prod": "docker compose -f docker-compose.prod.yml"
+    "docker:compose:prod": "docker compose -f docker-compose.prod.yml",
+    "check": "npm run check -w synthra-api --if-present & npm run check -w synthra-web --if-present & npm run check -w owner-hub --if-present",
+    "build:all": "npm run build:api && npm run build:web && npm run build:hub"
   }
 }

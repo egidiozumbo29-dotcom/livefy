@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSessionEmail } from "@/lib/auth";
-import { computeKpis, recentEvents } from "@/lib/metrics";
+import { computeKpis, recentEvents, dailyEarnings } from "@/lib/metrics";
 import { daysAgoUtc, formatEur, formatInteger } from "@/lib/format";
+import { EarningsChart } from "@/components/EarningsChart";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function HomePage({
 
   const { totals, perPlatform } = await computeKpis({ from, to });
   const events = await recentEvents(40);
+  const chartData = await dailyEarnings({ from, to });
 
   return (
     <main className="mx-auto max-w-7xl px-6 py-8">
@@ -58,6 +60,13 @@ export default async function HomePage({
           >
             Filtra
           </button>
+          <a
+            href={`/api/export?from=${from.toISOString().slice(0, 10)}&to=${to.toISOString().slice(0, 10)}`}
+            download
+            className="rounded-md border border-border bg-card px-4 py-1.5 text-sm font-semibold hover:border-accent"
+          >
+            ↓ CSV
+          </a>
           <form action="/api/auth/logout" method="post">
             <button
               type="submit"
@@ -82,6 +91,13 @@ export default async function HomePage({
       </section>
 
       <section className="mt-10 rounded-2xl border border-border bg-card p-5">
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wider">
+          Andamento giornaliero
+        </h2>
+        <EarningsChart data={chartData} />
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-border bg-card p-5">
         <h2 className="text-sm font-bold uppercase tracking-wider">
           Per piattaforma
         </h2>

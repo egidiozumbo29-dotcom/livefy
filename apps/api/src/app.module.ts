@@ -22,6 +22,7 @@ import { ViewerHistoryModule } from "./viewer-history/viewer-history.module";
 import { DiscoveryModule } from "./discovery/discovery.module";
 import { ModerationModule } from "./moderation/moderation.module";
 import { OutboxModule } from "./outbox/outbox.module";
+import { MailerModule } from "./mailer/mailer.module";
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { OutboxModule } from "./outbox/outbox.module";
     PrismaModule,
     RedisModule,
     OutboxModule,
+    MailerModule,
     AuthModule,
     UsersModule,
     ChatModule,

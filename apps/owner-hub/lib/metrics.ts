@@ -131,3 +131,61 @@ export async function recentEvents(limit = 50) {
     include: { platform: { select: { name: true } } },
   });
 }
+
+export type DailyPoint = { date: string; grossEur: number; ownerEur: number; events: number };
+
+export async function dailyEarnings(range: Range): Promise<DailyPoint[]> {
+  const rows = await prisma.analyticsEvent.findMany({
+    where: { occurredAt: { gte: range.from, lte: range.to } },
+    select: { occurredAt: true, type: true, amountEur: true },
+    orderBy: { occurredAt: "asc" },
+  });
+
+  const map = new Map<string, DailyPoint>();
+
+  for (const row of rows) {
+    const date = row.occurredAt.toISOString().slice(0, 10);
+    if (!map.has(date)) map.set(date, { date, grossEur: 0, ownerEur: 0, events: 0 });
+    const point = map.get(date)!;
+    point.events += 1;
+    const eur = row.amountEur ? Number(row.amountEur.toString()) : 0;
+    if (
+      row.type === EVENT_TYPES.TIP ||
+      row.type === EVENT_TYPES.STREAM_ACCESS ||
+      row.type === EVENT_TYPES.GALLERY_PURCHASE
+    ) {
+      point.grossEur = Math.round((point.grossEur + eur) * 10000) / 10000;
+    }
+    if (row.type === EVENT_TYPES.OWNER_REVENUE) {
+      point.ownerEur = Math.round((point.ownerEur + eur) * 10000) / 10000;
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+export async function exportEventsAsCsv(range: Range): Promise<string> {
+  const rows = await prisma.analyticsEvent.findMany({
+    where: { occurredAt: { gte: range.from, lte: range.to } },
+    orderBy: { occurredAt: "desc" },
+    include: { platform: { select: { name: true } } },
+    take: 10000,
+  });
+
+  const header = "date,platform,type,userId,username,amountTokens,amountEur,currency";
+  const lines = rows.map((r) => {
+    const cols = [
+      r.occurredAt.toISOString().slice(0, 19).replace("T", " "),
+      r.platform.name,
+      r.type,
+      r.userId ?? "",
+      r.username ?? "",
+      r.amountTokens != null ? r.amountTokens.toString() : "",
+      r.amountEur != null ? Number(r.amountEur.toString()).toFixed(4) : "",
+      r.currency ?? "EUR",
+    ];
+    return cols.map((c) => `"${c.replace(/"/g, '""')}"`).join(",");
+  });
+
+  return [header, ...lines].join("\n");
+}
