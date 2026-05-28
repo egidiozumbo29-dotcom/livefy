@@ -50,7 +50,13 @@ services:
       PORT: "4000"
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       SOCKET_CORS_ORIGIN: ${SOCKET_CORS_ORIGIN:-http://localhost:3000}
-      PLATFORM_TIP_FEE_PERCENT: ${PLATFORM_TIP_FEE_PERCENT:-50}
+      PLATFORM_TIP_FEE_PERCENT: ${PLATFORM_TIP_FEE_PERCENT:-30}
+      TOKEN_EUR_RATE: ${TOKEN_EUR_RATE:-0.05}
+      MODEL_PAYOUT_WITHHOLD_PERCENT: ${MODEL_PAYOUT_WITHHOLD_PERCENT:-40}
+      OWNER_HUB_URL: ${OWNER_HUB_URL:-}
+      OWNER_INGEST_TOKEN: ${OWNER_INGEST_TOKEN:-}
+      OWNER_PLATFORM_ID: ${OWNER_PLATFORM_ID:-livefy}
+      OWNER_PLATFORM_NAME: ${OWNER_PLATFORM_NAME:-Livefy}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       LIVEKIT_URL: ${LIVEKIT_URL:-}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
@@ -77,5 +83,46 @@ services:
     depends_on:
       - api
 
+  owner_hub_postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${HUB_POSTGRES_PASSWORD:-changeme_hub_pg}
+      POSTGRES_DB: owner_hub
+    volumes:
+      - hub_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d owner_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  owner_hub:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.hub
+      args:
+        OWNER_HUB_URL: ${OWNER_HUB_URL:-http://localhost:3100}
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    environment:
+      NODE_ENV: production
+      OWNER_HUB_DATABASE_URL: postgresql://postgres:${HUB_POSTGRES_PASSWORD:-changeme_hub_pg}@owner_hub_postgres:5432/owner_hub
+      OWNER_INGEST_TOKEN: ${OWNER_INGEST_TOKEN:?OWNER_INGEST_TOKEN_obbligatorio}
+      OWNER_ALLOWED_EMAILS: ${OWNER_ALLOWED_EMAILS:?OWNER_ALLOWED_EMAILS_obbligatorio}
+      OWNER_HUB_SECRET: ${OWNER_HUB_SECRET:?OWNER_HUB_SECRET_obbligatorio}
+      OWNER_HUB_URL: ${OWNER_HUB_URL:-http://localhost:3100}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    depends_on:
+      owner_hub_postgres:
+        condition: service_healthy
+
 volumes:
   synthra_pgdata:
+  hub_pgdata:
