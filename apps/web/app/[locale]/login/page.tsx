@@ -44,7 +44,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="form-input"
+              className="form-input text-violet-custom"
             />
           </label>
           <label className="mt-4 form-label">
@@ -55,7 +55,7 @@ export default function LoginPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="form-input"
+              className="form-input text-violet-custom"
             />
           </label>
           {error && (

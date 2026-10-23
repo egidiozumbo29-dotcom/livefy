@@ -702,10 +702,10 @@ export function LiveChat({
         {announcement}
       </span>
       <header className="flex items-center justify-between border-b border-cam-border bg-cam-ink px-3 py-2">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-cam-text">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-violet-custom">
           {showMode === "PRIVATE" ? tc("privateTitle") : tc("title")}
         </h2>
-        <span className="flex items-center gap-1.5 text-[11px] text-cam-muted">
+        <span className="flex items-center gap-1.5 text-[11px] text-violet-custom">
           <span className={`h-1.5 w-1.5 rounded-full ${statusDot}`} />
           {status === "online"
             ? tc("statusOnline")
@@ -737,7 +737,7 @@ export function LiveChat({
         </div>
       )}
 
-      <div className="m-2 rounded-md border border-cam-border/80 bg-cam-ink px-3 py-1.5 text-[10px] leading-snug text-cam-muted">
+      <div className="m-2 rounded-md border border-cam-border/80 bg-cam-ink px-3 py-1.5 text-[10px] leading-snug text-violet-custom">
         {tc.rich(showMode === "PRIVATE" ? "privateChatHint" : "publicChatHint", {
           strong: (c) => <strong className="text-cam-text">{c}</strong>,
         })}
@@ -776,12 +776,12 @@ export function LiveChat({
       >
         {activeTab === "private" ? (
           !resolvedPrivatePeerId && isStreamer ? (
-            <li className="rounded-md border border-cam-border bg-cam-ink px-3 py-2 text-xs text-cam-muted">
+            <li className="rounded-md border border-cam-border bg-cam-ink px-3 py-2 text-xs text-violet-custom">
               Clicca sul nome di uno spettatore nella chat pubblica e scegli
               Apri privata.
             </li>
           ) : privateMessages.length === 0 ? (
-            <li className="text-xs text-cam-muted">
+            <li className="text-xs text-violet-custom">
               Nessun messaggio privato in questa sessione.
             </li>
           ) : (
@@ -792,20 +792,20 @@ export function LiveChat({
                   key={m.id}
                   className={`rounded px-2 py-1.5 ${
                     mine
-                      ? "ml-8 bg-cam-orange/15 text-cam-text"
-                      : "mr-8 bg-cam-bg/90 text-cam-text"
+                      ? "ml-8 bg-cam-orange/15 text-violet-custom"
+                      : "mr-8 bg-cam-bg/90 text-violet-custom"
                   }`}
                 >
                   <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-cam-orange-bright">
                     {mine ? "Tu" : "Privata"}
                   </span>
-                  <span className="break-words">{m.content}</span>
+                  <span className="break-words text-violet-custom">{m.content}</span>
                 </li>
               );
             })
           )
         ) : messages.length === 0 ? (
-          <li className="text-xs text-cam-muted">{tc("emptyPlaceholder")}</li>
+          <li className="text-xs text-violet-custom">{tc("emptyPlaceholder")}</li>
         ) : (
           messages.map((m) => {
             if (m.tip != null) {
@@ -827,7 +827,7 @@ export function LiveChat({
                     >
                       {m.user}
                     </span>{" "}
-                    <span className="text-cam-muted">{tc("tipped")}</span>{" "}
+                    <span className="text-violet-custom">{tc("tipped")}</span>{" "}
                     <span className="font-bold text-cam-orange-bright">
                       {m.tip} {tc("tokenLabel")}
                     </span>
@@ -839,10 +839,10 @@ export function LiveChat({
               return (
                 <li
                   key={m.id}
-                  className="rounded-md border border-cam-orange/40 bg-cam-orange/10 px-3 py-2 text-xs text-cam-text"
+                  className="rounded-md border border-cam-orange/40 bg-cam-orange/10 px-3 py-2 text-xs text-violet-custom"
                 >
                   <p>
-                    <strong className="text-cam-orange-bright">{m.user}</strong>{" "}
+                    <strong className="text-violet-custom">{m.user}</strong>{" "}
                     {m.message} ·{" "}
                     <strong>{m.privateRequest.tokensPerMinute} tk/min</strong>
                   </p>
@@ -940,7 +940,7 @@ export function LiveChat({
                     </span>
                   ) : null}
                 </span>
-                <span className="break-words text-cam-text">
+                <span className="break-words text-violet-custom">
                   <ChatMessagePieces body={m.message} />
                 </span>
               </li>
@@ -950,19 +950,19 @@ export function LiveChat({
       </ul>
 
       {error && (
-        <p className="mx-3 mb-2 rounded border border-red-500/30 bg-red-950/50 px-2 py-1 text-[11px] text-red-200">
+        <p className="mx-3 mb-2 rounded border border-red-500/30 bg-red-950/50 px-2 py-1 text-[11px] text-violet-custom">
           {error}
         </p>
       )}
 
       {userMenu && (
-        <div className="mx-3 mb-2 rounded-md border border-cam-border bg-cam-ink p-3 text-xs text-cam-text">
+        <div className="mx-3 mb-2 rounded-md border border-cam-border bg-cam-ink p-3 text-xs text-violet-custom">
           <div className="mb-2 flex items-center justify-between gap-2">
             <strong>{userMenu.username}</strong>
             <button
               type="button"
               onClick={() => setUserMenu(null)}
-              className="text-cam-muted hover:text-cam-text"
+              className="text-cam-muted hover:text-violet-custom"
             >
               Chiudi
             </button>
@@ -1072,7 +1072,7 @@ export function LiveChat({
                     ? tc("placeholderWrite")
                     : tc("placeholderAnon")
             }
-            className="min-w-0 flex-1 rounded-full border border-cam-border bg-cam-bg px-3 py-2 text-sm text-cam-text placeholder:text-cam-muted focus:border-cam-orange focus:outline-none focus:ring-2 focus:ring-cam-orange/35 disabled:opacity-50"
+            className="min-w-0 flex-1 rounded-full border border-cam-border bg-cam-bg px-3 py-2 text-sm text-violet-custom placeholder:text-cam-muted focus:border-cam-orange focus:outline-none focus:ring-2 focus:ring-cam-orange/35 disabled:opacity-50"
           />
           <button
             type="submit"
@@ -1082,7 +1082,7 @@ export function LiveChat({
             {tc("send")}
           </button>
         </form>
-        <p className="mt-2 text-[10px] leading-snug text-cam-muted">{tc("footerHints")}</p>
+        <p className="mt-2 text-[10px] leading-snug text-violet-custom">{tc("footerHints")}</p>
       </div>
 
       {creatorId && (

@@ -129,4 +129,9 @@ textarea {
   .panel-muted {
     @apply rounded-md border border-cam-border bg-cam-ink px-3 py-2 text-xs text-cam-muted;
   }
+
+  /** Testo viola per chat, login, registrazione */
+  .text-violet-custom {
+    color: #a970ff;
+  }
 }

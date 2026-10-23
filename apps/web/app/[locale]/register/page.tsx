@@ -63,7 +63,7 @@ export default function RegisterPage() {
               minLength={3}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className={inputCls}
+              className={`${inputCls} text-violet-custom`}
             />
           </label>
           <label className={`mt-4 ${labelCls}`}>
@@ -73,7 +73,7 @@ export default function RegisterPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={inputCls}
+              className={`${inputCls} text-violet-custom`}
             />
           </label>
           <label className={`mt-4 ${labelCls}`}>
@@ -84,7 +84,7 @@ export default function RegisterPage() {
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={inputCls}
+              className={`${inputCls} text-violet-custom`}
             />
           </label>
           <label className={`mt-4 ${labelCls}`}>
@@ -94,7 +94,7 @@ export default function RegisterPage() {
               required
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
-              className={inputCls}
+              className={`${inputCls} text-violet-custom`}
             />
           </label>
           <label className={`mt-4 ${labelCls}`}>
@@ -103,7 +103,7 @@ export default function RegisterPage() {
               type="text"
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className={inputCls}
+              className={`${inputCls} text-violet-custom`}
             />
           </label>
           <label className="mt-4 flex cursor-pointer items-start gap-3 text-xs text-cam-muted">
