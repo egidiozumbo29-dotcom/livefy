@@ -2,9 +2,10 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  ForbiddenException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { Prisma, TxMethod, TxStatus } from "@prisma/client";
+import { Prisma, TxMethod, TxStatus, Role } from "@prisma/client";
 import { ChatGateway } from "../chat/chat.gateway";
 import { OutboxService } from "../outbox/outbox.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -195,5 +196,48 @@ export class TipsService {
       },
       tokens: Number(g._sum.amount?.toString() ?? "0"),
     }));
+  }
+
+  async exportTipsCsv(creatorId: string, requestUserId: string) {
+    const creator = await this.prisma.user.findUnique({
+      where: { id: creatorId },
+      select: { id: true, role: true },
+    });
+    if (!creator) throw new NotFoundException();
+
+    const requester = await this.prisma.user.findUnique({
+      where: { id: requestUserId },
+      select: { id: true, role: true },
+    });
+    if (!requester) throw new NotFoundException();
+
+    const isOwner = requestUserId === creatorId;
+    const isAdmin = requester.role === Role.ADMIN;
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException();
+    }
+
+    const tips = await this.prisma.tip.findMany({
+      where: { receiverId: creatorId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        amount: true,
+        createdAt: true,
+        streamId: true,
+        sender: {
+          select: { id: true, username: true },
+        },
+      },
+    });
+
+    const header = "ID,Sender Username,Amount Tokens,Date,Stream ID\n";
+    const rows = tips.map((t) => {
+      const amount = Number(t.amount.toString());
+      const date = t.createdAt.toISOString();
+      return `${t.id},${t.sender.username},${amount},${date},${t.streamId || ""}`;
+    }).join("\n");
+
+    return header + rows;
   }
 }

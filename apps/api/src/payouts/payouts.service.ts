@@ -323,4 +323,31 @@ export class PayoutsService {
       paidAt: updated.paidAt?.toISOString() ?? null,
     };
   }
+
+  async exportPayoutsCsv(userId: string) {
+    const payouts = await this.prisma.payoutRequest.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        amount: true,
+        method: true,
+        destination: true,
+        status: true,
+        note: true,
+        createdAt: true,
+        paidAt: true,
+      },
+    });
+
+    const header = "ID,Amount Tokens,Method,Destination,Status,Note,Created At,Paid At\n";
+    const rows = payouts.map((p) => {
+      const amount = Number(p.amount.toString());
+      const createdAt = p.createdAt.toISOString();
+      const paidAt = p.paidAt?.toISOString() || "";
+      return `${p.id},${amount},${p.method},${p.destination || ""},${p.status},${p.note || ""},${createdAt},${paidAt}`;
+    }).join("\n");
+
+    return header + rows;
+  }
 }

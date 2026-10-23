@@ -145,6 +145,24 @@ export function PayoutPanel() {
     }
   }
 
+  async function handleExportCsv() {
+    try {
+      const res = await apiFetch("/payouts/export");
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `payouts_${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setMsg("Errore durante l'export CSV.");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-md border border-cam-border bg-cam-card p-5 shadow-card">
@@ -159,14 +177,24 @@ export function PayoutPanel() {
               della piattaforma) e possono essere prelevati.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={refresh}
-            disabled={loading}
-            className="rounded-full border border-cam-border px-3 py-1.5 text-xs font-semibold text-cam-muted hover:border-cam-orange hover:text-cam-orange-bright disabled:opacity-50"
-          >
-            {loading ? "..." : "Aggiorna"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              disabled={loading}
+              className="rounded-full border border-cam-border px-3 py-1.5 text-xs font-semibold text-cam-muted hover:border-cam-orange hover:text-cam-orange-bright disabled:opacity-50"
+            >
+              Export CSV
+            </button>
+            <button
+              type="button"
+              onClick={refresh}
+              disabled={loading}
+              className="rounded-full border border-cam-border px-3 py-1.5 text-xs font-semibold text-cam-muted hover:border-cam-orange hover:text-cam-orange-bright disabled:opacity-50"
+            >
+              {loading ? "..." : "Aggiorna"}
+            </button>
+          </div>
         </header>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">

@@ -6,8 +6,10 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
+import { Response } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import type { AuthedRequest } from "../common/types/request-user";
 import { CreateTipDto } from "./dto/create-tip.dto";
@@ -35,5 +37,18 @@ export class TipsController {
   ) {
     const t = take ? Number(take) : 10;
     return this.tips.tipLeaderboardForStream(streamId, Number.isFinite(t) ? t : 10);
+  }
+
+  @Get("export/:creatorId")
+  @UseGuards(JwtAuthGuard)
+  async exportCsv(
+    @Param("creatorId") creatorId: string,
+    @Req() req: AuthedRequest,
+    @Res() res: Response,
+  ) {
+    const csv = await this.tips.exportTipsCsv(creatorId, req.user.userId);
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=tips_${creatorId}.csv`);
+    res.send(csv);
   }
 }

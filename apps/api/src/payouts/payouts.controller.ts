@@ -4,8 +4,10 @@ import {
   Get,
   Post,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
+import { Response } from "express";
 import { Role } from "@prisma/client";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../common/decorators/roles.decorator";
@@ -33,5 +35,13 @@ export class PayoutsController {
   @Post()
   request(@Req() req: AuthedRequest, @Body() dto: CreatePayoutDto) {
     return this.payouts.request(req.user.userId, dto);
+  }
+
+  @Get("export")
+  async exportCsv(@Req() req: AuthedRequest, @Res() res: Response) {
+    const csv = await this.payouts.exportPayoutsCsv(req.user.userId);
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=payouts_${req.user.userId}.csv`);
+    res.send(csv);
   }
 }
