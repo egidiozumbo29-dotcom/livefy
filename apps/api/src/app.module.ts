@@ -52,6 +52,7 @@ import { MailerModule } from "./mailer/mailer.module";
     AdminModule,
     PayoutsModule,
     VerificationModule,
+    VerificationsModule,
     DiscoveryModule,
     ModerationModule,
   ],
