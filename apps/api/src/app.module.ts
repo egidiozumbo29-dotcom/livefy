@@ -18,6 +18,7 @@ import { CreatorsModule } from "./creators/creators.module";
 import { AdminModule } from "./admin/admin.module";
 import { PayoutsModule } from "./payouts/payouts.module";
 import { VerificationModule } from "./verification/verification.module";
+import { VerificationsModule } from "./verifications/verifications.module";
 import { ViewerHistoryModule } from "./viewer-history/viewer-history.module";
 import { DiscoveryModule } from "./discovery/discovery.module";
 import { ModerationModule } from "./moderation/moderation.module";

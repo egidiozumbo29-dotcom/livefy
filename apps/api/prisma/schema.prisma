@@ -72,6 +72,12 @@ enum ReportStatus {
   REJECTED
 }
 
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model User {
   id               String    @id @default(cuid())
   username         String    @unique
@@ -201,16 +207,33 @@ model ProfileVisit {
  * Documento + selfie per verifica età/identità e attivazione ruolo MODEL (viewer → streamer).
  */
 model StreamerVerification {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String             @id @default(cuid())
+  userId           String             @unique
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status           VerificationStatus @default(PENDING)
   /**
    * Path assoluto o relativo a uploads/ lato server — mai esposto al client.
    */
   idDocumentPath   String
   selfieWithIdPath String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  /**
+   * Campi aggiuntivi per modulo onboarding
+   */
+  realName         String?
+  realAddress      String?
+  phoneNumber      String?
+  taxId            String?  // Codice fiscale / VAT
+  /**
+   * Note per rifiuto (se status = REJECTED)
+   */
+  rejectionReason String?
+  /**
+   * Quando è stato approvato (per record keeping)
+   */
+  approvedAt       DateTime?
+  approvedBy       String?  // Admin userId
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   @@map("streamer_verifications")
 }

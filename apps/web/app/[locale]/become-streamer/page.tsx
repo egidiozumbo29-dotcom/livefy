@@ -4,10 +4,8 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 import { AuthScreen } from "@/components/auth/AuthScreen";
-import { submitStreamerKyc } from "@/services/auth-api";
-import { persistAuth } from "@/services/session";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setCredentials } from "@/store/slices/authSlice";
+import { apiFetch } from "@/services/api";
+import { useAppSelector } from "@/store/hooks";
 
 export default function BecomeStreamerPage() {
   const router = useRouter();
@@ -15,11 +13,15 @@ export default function BecomeStreamerPage() {
   const tNav = useTranslations("nav");
   const token = useAppSelector((s) => s.auth.token);
   const user = useAppSelector((s) => s.auth.user);
-  const dispatch = useAppDispatch();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
   const [idFile, setIdFile] = useState<File | null>(null);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const [realName, setRealName] = useState("");
+  const [realAddress, setRealAddress] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [taxId, setTaxId] = useState("");
 
   const isCreator =
     user?.role === "MODEL" || user?.role === "ADMIN";
@@ -28,7 +30,7 @@ export default function BecomeStreamerPage() {
     e.preventDefault();
     setError(null);
     if (!idFile || !selfieFile) {
-      setError(t("errorBothFiles"));
+      setError("Devi caricare entrambi i documenti");
       return;
     }
     setLoading(true);
@@ -36,12 +38,24 @@ export default function BecomeStreamerPage() {
       const fd = new FormData();
       fd.append("idDocument", idFile);
       fd.append("selfieWithId", selfieFile);
-      const data = await submitStreamerKyc(fd);
-      dispatch(setCredentials({ token: data.access_token, user: data.user }));
-      persistAuth(data.access_token, data.user);
-      await router.replace("/studio");
+      fd.append("realName", realName);
+      fd.append("realAddress", realAddress);
+      fd.append("phoneNumber", phoneNumber);
+      fd.append("taxId", taxId);
+
+      const res = await apiFetch("/verifications", {
+        method: "POST",
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Errore durante l'invio");
+      }
+
+      setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("retry"));
+      setError(err instanceof Error ? err.message : "Errore durante l'invio");
     } finally {
       setLoading(false);
     }
@@ -77,10 +91,68 @@ export default function BecomeStreamerPage() {
     );
   }
 
+  if (success) {
+    return (
+      <AuthScreen title={t("title")} subtitle={t("subtitle")}>
+        <div className="rounded-md border border-emerald-500/30 bg-emerald-950/35 px-4 py-4 text-sm text-emerald-100">
+          <p className="font-bold">Richiesta inviata con successo!</p>
+          <p className="mt-2">
+            La tua richiesta è in revisione. Riceverai una notifica quando verrà approvata.
+          </p>
+        </div>
+        <Link
+          href="/"
+          className="mt-4 inline-block w-full rounded-full bg-cam-cta py-2.5 text-center text-sm font-bold uppercase tracking-wide text-cam-ink shadow"
+        >
+          Torna alla home
+        </Link>
+      </AuthScreen>
+    );
+  }
+
   return (
     <AuthScreen title={t("title")} subtitle={t("subtitle")}>
       <form onSubmit={onSubmit} className="form-panel">
         <label className="form-label">
+          Nome reale completo
+          <input
+            type="text"
+            required
+            value={realName}
+            onChange={(e) => setRealName(e.target.value)}
+            className="form-input text-violet-custom"
+          />
+        </label>
+        <label className="mt-4 form-label">
+          Indirizzo completo
+          <input
+            type="text"
+            required
+            value={realAddress}
+            onChange={(e) => setRealAddress(e.target.value)}
+            className="form-input text-violet-custom"
+          />
+        </label>
+        <label className="mt-4 form-label">
+          Numero di telefono
+          <input
+            type="tel"
+            required
+            value={phoneNumber}
+            onChange={(e) => setPhoneNumber(e.target.value)}
+            className="form-input text-violet-custom"
+          />
+        </label>
+        <label className="mt-4 form-label">
+          Codice fiscale / VAT (opzionale)
+          <input
+            type="text"
+            value={taxId}
+            onChange={(e) => setTaxId(e.target.value)}
+            className="form-input text-violet-custom"
+          />
+        </label>
+        <label className="mt-6 form-label">
           {t("idDocument")}
           <input
             type="file"
@@ -114,7 +186,7 @@ export default function BecomeStreamerPage() {
           disabled={loading}
           className="mt-6 w-full rounded-full bg-cam-cta py-2.5 text-sm font-bold uppercase tracking-wide text-cam-ink shadow disabled:opacity-50"
         >
-          {loading ? t("submitLoading") : t("submit")}
+          {loading ? "Invio in corso..." : "Invia richiesta"}
         </button>
       </form>
     </AuthScreen>
